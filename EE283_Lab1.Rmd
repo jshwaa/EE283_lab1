@@ -1,0 +1,172 @@
+---
+title: "EE283_Lab1"
+author: "Josh Crapser"
+date: "January 10, 2019"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+## Chapter 7
+
+### 1.
+
+__Create a small tibble manually__
+
+```{r tibble}
+tibble("Row Number"=1:5, "Proper noun"="Josh", "Verb"="is", "Adjective"="awesome", "Punctuation"="!")
+
+```
+
+### 2.
+__Q1: How can you tell if an object is a tibble? (Hint: try printing mtcars, which is a regular data frame.)__
+
+You can run the function ```is.tibble()``` which will return true or false depending on if the argument is a tibble or not. Or, you can just ```print()``` the object in the console, as tibbles (but not data.frames) will print the first 10 rows and as many columns as can neatly fit on screen, the data type of each column, and, most importantly, that the structure is a tibble. 
+
+__Q2: Compare and contrast the following operations on a data.frame and equivalent tibble. What is different? Why might the default data frame behaviors cause you frustration?__
+
+```{r Q2}
+df <- data.frame(abc = 1, xyz = "a")
+df$x
+df[, "xyz"]
+df[, c("abc", "xyz")]
+```
+
+```{r Q2tri}
+df <- tibble(abc = 1, xyz = "a")
+df$x
+df[, "xyz"]
+df[, c("abc", "xyz")]
+```
+
+1) data.frames allow partial matching for subsetting columns while tibbles do not, i.e. ```df$x``` on the data.frame returned the "xyz" column, while performing it on the tibble returns "Warning message: Unknown or uninitialised column: 'x'.". data.frame() also imports strings as factors, i.e.:
+
+```{r factors}
+data.frame(abc = 1, xyz = "a") %>% .$x %>% str() # changes str to factor + partial matching
+tibble(abc = 1, xyz = "a") %>% .$xyz %>% str() # never changes input type
+```
+
+As such, the default data frames allow for more ambiguity in subsetting columns and unintentional input type conversions, which may confound downstream data analysis.
+
+__Q4: Practice referring to nonsyntactic names in the following data frame by:__
+
+```{r annoying data frame}
+annoying <- tibble(
+`1` = 1:10,
+`2` = `1` * 2 + rnorm(length(`1`))
+)
+```
+
+
+a. Extracting the variable called 1.
+
+```{r v1}
+annoying$`1`
+```
+
+b. Plotting a scatterplot of 1 versus 2.
+
+```{r v12}
+plot(annoying$`1`, annoying$`2`, type="p")
+```
+
+c. Creating a new column called 3, which is 2 divided by 1.
+```{r v3}
+annoying$`3` <- annoying$`2`/annoying$`1`
+annoying$`3`
+```
+
+d. Renaming the columns to one, two, and three:
+
+```{r rename}
+colnames(annoying) <- c("one", "two", "three")
+colnames(annoying)
+```
+
+__Q5: What does tibble::enframe() do? When might you use it?__
+
+tibble::enframe() converts named atomic vectors or lists into two-column ("name" and "value" columns) tibbles. You could use it in this way to combine vectors containing trial runs (or other replicate scores) into a tibble data frame, as done below:
+
+```{r enframe}
+counts <- c(213, 325, 154)
+names(counts) <- c("Sample 1", "Sample 2", "Sample 3")
+tibble::enframe(counts, name="Sample ID", value="Counts")
+counts
+
+expt <- list(Trial_1=c(235, 547, 918), Trial_2=c(843, 1024, 283), Trial_3=c(325, 921, 483))
+tibble::enframe(expt)
+expt
+expt$Trial_1
+```
+
+__Q6: What option controls how many additional column names are printed at the footer of a tibble?__
+
+The option "n_extra" in ```print(tibble, n_extra = x)``` will print x abbreviated columns more than what is displayed on screen if the entire tibble can not fit when printed.
+
+## Chapter 8
+
+__Q1: What function would you use to read a file where fields are separated with "|"?__
+
+You would use ```read_delim(file, delim="|")``` to read in a file with "|"-separated fields.
+
+__Q2: Apart from file, skip, and comment, what other arguments do read_csv() and read_tsv() have in common?__
+
+`read_csv()` and `read_tsv()` share all of the same arguments. Besides those listed, they also share: col_names, col_types, locale, na, quoted_na, quote, trim_ws, n_max, guess_max, progress, skip_empty_rows.
+
+__Q4. Sometimes strings in a CSV file contain commas. To prevent them from causing problems they need to be surrounded by a quoting character, like " or '. By convention, read_csv() assumes that the quoting character will be ", and if you want to change it you'll need to use read_delim() instead. What arguments do you need to specify to read the following text into a data frame?   "x,y\n1,'a,b'" __
+
+You need to specify the "quote" argument.
+
+```{r read_csv}
+read_csv("x,y\n1,'a,b'", quote="'")
+```
+
+## Chapter 9
+
+__Section 1 Q3. Re-create the plot showing change in cases over time using table2 instead of table1. What do you need to do first?__
+
+You would first have to use spread() to separate cases and population into their own colulmns:
+```{r spread}
+library(ggplot2)
+spread(tidyr::table2, type, count) %>%
+  
+ggplot(aes(year, cases)) + geom_line(aes(group = country), color = "grey50") + geom_point(aes(color = country))
+```
+
+__Section 2 Q2: Why does this code fail?__
+
+```{r fail}
+#table4a %>%
+#gather(1999, 2000, key = "year", value = "cases")
+#> Error in eval(expr, envir, enclos):
+#> Position must be between 0 and n_
+```
+
+Because "1999" and "2000" are nonsyntactic variable names and must be surrounded by backticks:
+
+```{r failnot}
+table4a %>%
+gather(`1999`, `2000`, key = "year", value = "cases")
+```
+
+## Chapter 10
+
+__Section 2__
+
+__Q1: Add a surrogate key to flights.__
+
+```{r surrogate}
+library(nycflights13)
+surrogate_flights=mutate(flights, row_num = row_number())
+print(surrogate_flights) #row_num is the surrogate key
+```
+
+__Section 3__
+
+__Q2: Add the location of the origin and destination (i.e., the lat and lon) to flights.__
