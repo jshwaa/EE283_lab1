@@ -170,3 +170,22 @@ print(surrogate_flights) #row_num is the surrogate key
 __Section 3__
 
 __Q2: Add the location of the origin and destination (i.e., the lat and lon) to flights.__
+
+```{r leftjoin}
+origin=airports %>%
+rename(origin = faa) %>%
+select(origin, lat, lon)
+
+dest=airports %>%
+rename(dest = faa) %>%
+select(dest, lat, lon)
+
+newflights=flights %>%
+left_join(origin, by = "origin") %>%
+rename(lat_origin = lat) %>%
+rename(lon_origin = lon) %>%
+left_join(dest, by = "dest") %>%
+rename(lat_dest = lat) %>%
+rename(lon_dest = lon)
+newflights
+```
